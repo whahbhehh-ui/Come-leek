@@ -3,16 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pawsome Script Panel - แผงควบคุมสคริปต์</title>
+    <title>Pawsome Script Panel - Discord Auth</title>
     <style>
         :root {
             --bg-color: #0f172a;
             --card-bg: #1e293b;
             --accent-color: #38bdf8;
-            --accent-hover: #0ea5e9;
+            --discord-color: #5865F2;
             --text-color: #f8fafc;
-            --danger-color: #ef4444;
-            --success-color: #22c55e;
         }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -28,21 +26,25 @@
             padding: 30px;
             border-radius: 12px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-        }
-        h2 {
-            margin-top: 0;
-            color: var(--accent-color);
             text-align: center;
         }
-        .form-group {
-            margin-bottom: 20px;
+        h2 { color: var(--accent-color); }
+        .btn-discord {
+            background-color: var(--discord-color);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 20px;
         }
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-        }
-        input[type="text"], input[type="password"], textarea {
+        .form-group { margin-bottom: 20px; text-align: left; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; }
+        input[type="text"], textarea {
             width: 100%;
             padding: 12px;
             background: #0f172a;
@@ -52,94 +54,81 @@
             box-sizing: border-box;
             font-family: monospace;
         }
-        textarea {
-            height: 200px;
-            resize: vertical;
-        }
-        .btn-group {
-            display: flex;
-            gap: 10px;
-        }
-        button {
-            flex: 1;
+        textarea { height: 200px; resize: vertical; }
+        button.save-btn {
+            width: 100%;
             padding: 12px;
+            background-color: var(--accent-color);
+            color: #0f172a;
             border: none;
             border-radius: 6px;
             font-weight: bold;
             cursor: pointer;
-            transition: background 0.2s;
         }
-        .btn-save {
-            background-color: var(--accent-color);
-            color: #0f172a;
-        }
-        .btn-save:hover {
-            background-color: var(--accent-hover);
-        }
-        .btn-toggle-on {
-            background-color: var(--success-color);
-            color: white;
-        }
-        .btn-toggle-off {
-            background-color: var(--danger-color);
-            color: white;
-        }
-        #result-msg {
-            margin-top: 15px;
-            text-align: center;
-            font-weight: bold;
-        }
-        .hint {
-            font-size: 12px;
-            color: #94a3b8;
-            margin-top: 4px;
-        }
+        #panel-content { display: none; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h2>🐾 Pawsome Script Control Panel</h2>
-    
-    <div class="form-group">
-        <label>Admin Secret Key (รหัสผ่านหลังบ้าน):</label>
-        <input type="password" id="admin_key" placeholder="ใส่รหัสผ่านแอดมินของคุณ">
+
+    <!-- ส่วนสำหรับยังไม่ล็อกอิน -->
+    <div id="login-section">
+        <p>กรุณายืนยันตัวตนด้วยบัญชี Discord ของแอดมินก่อนเข้าใช้งาน</p>
+        <a href="/auth/discord" class="btn-discord">Login with Discord</a>
     </div>
 
-    <div class="form-group">
-        <label>ชื่อโปรเจกต์ (Project Name):</label>
-        <input type="text" id="project" placeholder="เช่น pawsome-hub">
-    </div>
+    <!-- ส่วนจัดการโค้ด (แสดงผลเฉพาะแอดมินที่ล็อกอินแล้ว) -->
+    <div id="panel-content">
+        <p id="user-welcome" style="color: #22c55e; font-weight: bold;"></p>
+        
+        <div class="form-group">
+            <label>ชื่อโปรเจกต์ (Project Name):</label>
+            <input type="text" id="project" placeholder="เช่น pawsome-hub">
+        </div>
 
-    <div class="form-group">
-        <label>ชื่อไฟล์ (Filename):</label>
-        <input type="text" id="filename" placeholder="เช่น main.lua">
-    </div>
+        <div class="form-group">
+            <label>ชื่อไฟล์ (Filename):</label>
+            <input type="text" id="filename" placeholder="เช่น main.lua">
+        </div>
 
-    <div class="form-group">
-        <label>โค้ด Lua (วางโค้ดที่ผ่านการ Obfuscate แล้วที่นี่):</label>
-        <textarea id="code" placeholder="-- วางโค้ด Lua ที่นี่..."></textarea>
-    </div>
+        <div class="form-group">
+            <label>โค้ด Lua (วางโค้ดที่ผ่าน Obfuscate แล้ว):</label>
+            <textarea id="code" placeholder="-- วางโค้ดที่นี่..."></textarea>
+        </div>
 
-    <div class="btn-group">
-        <button class="btn-save" onclick="saveScript(true)">บันทึกโค้ด (เปิดใช้งาน)</button>
-        <button class="btn-toggle-off" onclick="saveScript(false)">ปิดการใช้งานลิงก์นี้</button>
+        <button class="save-btn" onclick="saveScript()">บันทึกโค้ดและอัปเดตลิงก์ Raw</button>
+        <div id="result-msg" style="margin-top: 15px; font-weight: bold;"></div>
     </div>
-
-    <div id="result-msg"></div>
 </div>
 
 <script>
-    async function saveScript(isActive) {
-        const admin_key = document.getElementById('admin_key').value;
+    // ตรวจสอบสถานะการล็อกอินทันทีที่เปิดเว็บ
+    async function checkAuth() {
+        try {
+            const res = await fetch('/api/check-auth');
+            const data = await res.json();
+            if (data.loggedIn) {
+                document.getElementById('login-section').style.display = 'none';
+                document.getElementById('panel-content').style.display = 'block';
+                document.getElementById('user-welcome').innerText = `👋 ยินดีต้อนรับคุณแอดมิน: ${data.user.username}`;
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+    checkAuth();
+
+    async function saveScript() {
         const project = document.getElementById('project').value;
         const filename = document.getElementById('filename').value;
         const code = document.getElementById('code').value;
         const msgDiv = document.getElementById('result-msg');
 
-        if (!admin_key || !project || !filename) {
+        if (!project || !filename) {
             msgDiv.style.color = '#ef4444';
-            msgDiv.innerText = '⚠️ กรุณากรอกรหัสผ่าน ชื่อโปรเจกต์ และชื่อไฟล์ให้ครบถ้วน!';
+            msgDiv.innerText = '⚠️ กรุณากรอกชื่อโปรเจกต์และชื่อไฟล์ให้ครบถ้วน!';
             return;
         }
 
@@ -147,34 +136,23 @@
         msgDiv.innerText = '⏳ กำลังบันทึกข้อมูล...';
 
         try {
-            // เปลี่ยน URL ตรงนี้ให้ตรงกับที่เซิร์ฟเวอร์ Node.js ของคุณรันอยู่ (เช่น http://localhost:3000/api/manage)
-            const response = await fetch('http://localhost:3000/api/manage', {
+            const response = await fetch('/api/manage', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    admin_key: admin_key,
-                    action: 'save',
-                    project: project,
-                    filename: filename,
-                    code: code,
-                    active: isActive
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'save', project, filename, code, active: true })
             });
-
             const result = await response.json();
 
             if (response.ok) {
                 msgDiv.style.color = '#22c55e';
-                msgDiv.innerText = `✅ สำเร็จ! สถานะลิงก์ตอนนี้: ${isActive ? 'เปิดใช้งานอยู่ 🟢' : 'ปิดใช้งานแล้ว 🔴'}`;
+                msgDiv.innerText = '✅ บันทึกโค้ดสำเร็จ ลิงก์ Raw อัปเดตเรียบร้อย!';
             } else {
                 msgDiv.style.color = '#ef4444';
-                msgDiv.innerText = `❌ ผิดพลาด: ${result.error || 'รหัสผ่านไม่ถูกต้อง'}`;
+                msgDiv.innerText = `❌ ผิดพลาด: ${result.error}`;
             }
         } catch (error) {
             msgDiv.style.color = '#ef4444';
-            msgDiv.innerText = '❌ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ (ตรวจสอบว่ารัน Node.js อยู่หรือยัง)';
+            msgDiv.innerText = '❌ เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์';
         }
     }
 </script>
